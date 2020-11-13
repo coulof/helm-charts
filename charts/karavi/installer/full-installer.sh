@@ -16,6 +16,8 @@ usage() {
    echo
    echo "Arguments:"
    echo "-c             Directory where certificates are stored"
+   echo "-n             Namespace where karavi components are installed"
+   echo "-l             Disable the installation of linkerd"
    echo
 }
 
@@ -38,6 +40,8 @@ check_dependencies() {
 }
 
 install_linkerd() {
+	
+
 	# Add linkerd helm repo
 	status "Installing linkerd"
 	run_command "helm repo add linkerd https://helm.linkerd.io/stable"
@@ -123,6 +127,14 @@ install_karavi() {
 
 }
 
+uninstall_all() {
+	status "Uninstalling linkerd"
+	run_command "helm delete linkerd -n $NAMESPACE"
+	status "Uninstalling cert-manager"
+	run_command "helm delete cert-manager -n $NAMESPACE"
+
+}
+
 run_command() {
   CMDOUT=$(eval "${@}" 2>&1)
   local rc=$?
@@ -141,10 +153,17 @@ run_command() {
   fi
 }
 
-while getopts "c:" opt; do
+while getopts "n:c:u" opt; do
 	case ${opt} in
 		c )
 			CERTS_DIRECTORY=$OPTARG
+			;;
+		u )
+			uninstall_all()
+			exit 0
+			;;
+		n )
+			NAMESPACE=$OPTARG
 			;;
 		\? )
 			echo "Invalid option: -$OPTARG" >&2
@@ -156,8 +175,8 @@ while getopts "c:" opt; do
 done
 
 check_dependencies
-install_linkerd
 install_cert_manager
+install_linkerd
 install_otel_collector
 install_prometheus
 install_grafana
